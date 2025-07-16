@@ -24,6 +24,11 @@ class User extends Authenticatable
         'password',
     ];
 
+    public function courses()
+{
+    return $this->hasMany(\App\Models\Course::class);
+}
+
     /**
      * The attributes that should be hidden for serialization.
      *

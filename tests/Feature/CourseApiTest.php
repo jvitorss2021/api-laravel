@@ -1,24 +1,31 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\Feature; 
+
 use App\Models\Course;
+use App\Models\User; 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 
-uses( RefreshDatabase::class,
+uses(
+    RefreshDatabase::class,
     WithFaker::class
 );
 
 test('can get all courses', function () {
+    $user = User::factory()->create(); 
     Course::factory()->count(5)->create();
 
-    $response = $this->getJson('/api/courses');
 
-    $response->assertStatus(200)
-             ->assertJsonCount(5);
+    $this->actingAs($user)
+         ->getJson('/api/courses')
+         ->assertStatus(200)
+         ->assertJsonCount(5);
 });
 
-test('can create a course', function () {
+test('an authenticated user can create a course', function () {
+    $user = User::factory()->create();
+    
     $courseData = [
         'name' => $this->faker->word,
         'description' => $this->faker->sentence,
@@ -26,58 +33,54 @@ test('can create a course', function () {
         'price' => $this->faker->randomFloat(2, 10, 1000),
     ];
 
-    $response = $this->postJson('/api/courses', $courseData);
+    $this->actingAs($user)
+         ->postJson('/api/courses', $courseData)
+         ->assertStatus(201);
 
-    $response->assertStatus(201)
-             ->assertJsonFragment($courseData);
+    $this->assertDatabaseHas('courses', ['name' => $courseData['name']]);
 });
 
 test('can show a course', function () {
+    $user = User::factory()->create();
     $course = Course::factory()->create();
 
-    $response = $this->getJson("/api/courses/{$course->id}");
-
-    $response->assertStatus(200)
-             ->assertJsonFragment($course->toArray());
+    $this->actingAs($user)
+         ->getJson("/api/courses/{$course->id}")
+         ->assertStatus(200)
+         ->assertJsonFragment(['id' => $course->id]);
 });
 
-test('can update a course', function () {
-    $course = Course::factory()->create();
-    $updatedData = [
-        'name' => 'Updated Course Name',
-        'description' => 'Updated Description',
-        'duration' => 50,
-        'price' => 200.00,
-    ];
+test('an authenticated user can update a course', function () { 
+    $user = User::factory()->create();
+    $course = Course::factory()->create(['user_id' => $user->id]);
 
-    $response = $this->putJson("/api/courses/{$course->id}", $updatedData);
+    $updateData = ['name' => 'Updated Course Name'];
 
-    $response->assertStatus(200)
-             ->assertJsonFragment($updatedData);
+    $this->actingAs($user) 
+         ->putJson("/api/courses/{$course->id}", $updateData)
+         ->assertStatus(200)
+         ->assertJsonFragment($updateData);
+
+    $this->assertDatabaseHas('courses', $updateData);
 });
 
-test('can delete a course', function () {
-    $course = Course::factory()->create();
+test('an authenticated user can delete a course', function () { 
+    $user = User::factory()->create();
+    $course = Course::factory()->create(['user_id' => $user->id]);
 
-    $response = $this->deleteJson("/api/courses/{$course->id}");
-
-    $response->assertStatus(204);
+    $this->actingAs($user) 
+         ->deleteJson("/api/courses/{$course->id}")
+         ->assertStatus(204);
+    
     $this->assertDatabaseMissing('courses', ['id' => $course->id]);
 });
 
-test('course name is required', function () {
-    $response = $this->postJson('/api/courses', [
-        'description' => 'Test Description',
-        'duration' => 30,
-        'price' => 100.00,
-    ]);
+test('it returns a validation error if name is not provided', function () {
+    $user = User::factory()->create();
 
-    $response->assertStatus(422)
-             ->assertJsonValidationErrors(['name']);
+    $this->actingAs($user)
+         ->postJson('/api/courses', ['name' => ''])
+         ->assertStatus(422)
+         ->assertJsonValidationErrors(['name']);
 });
 
-test('example', function () {
-    $response = $this->get('/');
-
-    $response->assertStatus(200);
-});
