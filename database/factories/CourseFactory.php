@@ -17,6 +17,7 @@ class CourseFactory extends Factory
     public function definition(): array
     {
         return [
+            'user_id'     => \App\Models\User::factory(),
             'name' => $this->faker->unique()->sentence(3),
             'description' => $this->faker->paragraph(),
             'duration' => $this->faker->numberBetween(1, 52), // Duration in weeks

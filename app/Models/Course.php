@@ -14,5 +14,10 @@ class Course extends Model
         'description',
         'duration',
         'price',
+        'user_id',
     ];
+    public function user()
+{
+    return $this->belongsTo(\App\Models\User::class);
+}
 }

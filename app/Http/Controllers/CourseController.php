@@ -1,31 +1,34 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use App\Models\Course;
-use Illuminate\Validation\Rule;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class CourseController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Lista todos os cursos, incluindo os dados do usuário criador.
      */
     public function index()
     {
-        return response()->json(Course::all());
+        return response()->json(Course::with('user')->get());
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Cria um novo curso.
      */
     public function store(Request $request)
     {
         $validatedData = $request->validate([
-            'name' => ['required', 'string', 'max:255', Rule::unique('courses')],
+            'name'        => ['required', 'string', 'max:255', Rule::unique('courses')],
             'description' => ['nullable', 'string'],
-            'duration' => ['nullable', 'integer', 'min:1'],
-            'price' => ['required', 'numeric', 'min:0'],
+            'duration'    => ['required', 'integer', 'min:1'],
+            'price'       => ['required', 'numeric', 'min:0'],
         ]);
+
+        $validatedData['user_id'] = auth()->id();
 
         $course = Course::create($validatedData);
 
@@ -33,23 +36,25 @@ class CourseController extends Controller
     }
 
     /**
-     * Display the specified resource.
+     * Exibe um curso específico.
      */
     public function show(Course $course)
     {
+        $course->load('user');
         return response()->json($course);
     }
 
     /**
-     * Update the specified resource in storage.
+     * Atualiza um curso específico.
      */
     public function update(Request $request, Course $course)
     {
+
         $validatedData = $request->validate([
-            'name' => ['required', 'string', 'max:255', Rule::unique('courses')->ignore($course->id)],
-            'description' => ['nullable', 'string'],
-            'duration' => ['nullable', 'integer', 'min:1'],
-            'price' => ['required', 'numeric', 'min:0'],
+            'name'        => ['sometimes', 'string', 'max:255', Rule::unique('courses')->ignore($course->id)],
+            'description' => ['sometimes', 'nullable', 'string'],
+            'duration'    => ['sometimes', 'integer', 'min:1'],
+            'price'       => ['sometimes', 'numeric', 'min:0'],
         ]);
 
         $course->update($validatedData);
@@ -58,11 +63,14 @@ class CourseController extends Controller
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Remove um curso específico.
      */
     public function destroy(Course $course)
     {
+        // $this->authorize('delete', $course);
+
         $course->delete();
+
         return response()->json(null, 204);
     }
 }
